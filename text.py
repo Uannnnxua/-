@@ -1,9 +1,10 @@
+import os
 import math
 import time
+import json
 import pygame 
-import numpy as np
 import random
-import tkinter as Tk
+import numpy as np
 from tkinter import *
 
 class pyg:
@@ -23,23 +24,22 @@ class pyg:
     def __init__(self):
         self.WIDTH = 900
         self.HEIGHT = 600        
-        self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT)) # 設定視窗大小
         pygame.display.set_caption('picture')
         self.white = (235, 215, 155)
         self.running = True 
         self.x = self.WIDTH // 2
         self.y = self.HEIGHT // 2
         self.speed = 5
-        self.downloadtime = time.time()
         self.goback = self.goback() # 連接、定義回朔、訂定初始化 goback
-        # 遊戲計時設定
-        self.run_game_time = time.time()
+
+        # 遊戲總時間
         self.game_all_time = 60
 
         # 遊戲加、減分 and 加降速設置
         self.got_point = 0
         self.star_list = []
         self.unpoint_list = []
+        self.high_score = self.gameover_point() # 讀取最高分數
         self.last_time_star = time.time() # 上一次星星所生成時間
         self.last_time_unpoint = time.time()
 
@@ -122,8 +122,34 @@ class pyg:
                 self.speed -= 1
                 self.got_point -= 1
 
+    # ----------------------儲存與輸出最高分數------------------------
+    def gameover_point(self):
+        # json 儲存檔案
+        if os.path.exists("data.json"):
+            with open('data.json', 'r') as f:
+                try:
+                    data = json.load(f)
+                    return data.get('high_score', 0) # 讀取資料
+                except json.JSONDecodeError:
+                    return 0
+        return 0
+    
+    def remove_score(self):
+        if self.got_point > self.high_score:
+            self.high_score = self.got_point
+            with open('data.json', 'w+') as f:
+                json.dump({'high_score': self.high_score}, f)
+    # ----------------------------------------------------------------
+
     def run_game(self):
+        # 回朔時間設定
+        self.downloadtime = time.time()
+        # 遊戲計時設定
+        self.run_game_time = time.time()
+
         pygame.init()
+
+        self.screen = pygame.display.set_mode((self.WIDTH, self.HEIGHT)) # 設定視窗大小
         while self.running:
             pygame.time.delay(20) # 執行迴圈延遲
 
@@ -167,19 +193,75 @@ class pyg:
 
             show_got_point = font.render(f'Got point: ' + str(int(self.got_point)), True, (200,200,200))
             self.screen.blit(show_got_point, (390, 10))
-
+            
+            show_high_score = font.render(f'High score: ' + str(int(self.high_score)), True, (48,25,52)) # 後三項為數字
+            self.screen.blit(show_high_score, (720, 10))
+            print(1)
 
             pygame.display.update()
             
             if remaining_time <= 0:
                 self.running = False
-       
+        self.remove_score()
         pygame.quit()
-    
+
+    def show_menu(self):
+        pygame.init()
+        menu_running = True 
+        font = pygame.font.Font(None, 50)  # 設定字體和大小
+        WITH, HEGHT = 500, 500
+        screen = pygame.display.set_mode((WITH, HEGHT))
+
+        # 按鈕屬性設定
+        open_button = pygame.Rect(WITH // 2 - 90, 200, 195, 35) #　四邊ｘ，ｙ座標
+        close_button = pygame.Rect(WITH // 2 - 90, 300, 195, 35)
+        button_color = (255, 255, 255)
+
+        while menu_running:
+            screen.fill((200, 200, 200))  # 設定選單背景顏色
+
+            # 繪製按鈕
+            pygame.draw.rect(screen, button_color, open_button)
+            pygame.draw.rect(screen, button_color, close_button)
+
+            # 顯示選項文字
+            title_text = font.render("Game Menu", True, (0, 0, 0))
+            start_text = font.render("Start Game", True, (0, 0, 0))
+            quit_text = font.render("Quit", True, (0, 0, 0))
+
+            # 將文字繪製到按鈕上
+            screen.blit(title_text, (WITH // 2 - 100, 100))
+            screen.blit(start_text, (WITH // 2 - 85, 200))
+            screen.blit(quit_text, (WITH // 2 - 35, 300))
+
+            pygame.display.update() # 重製視窗
+
+            # 監聽選單事件
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    menu_running = False
+                    pygame.quit()
+                    return
+                    # 結束遊戲
+                elif event.type == pygame.MOUSEBUTTONDOWN: # 監聽滑鼠當滑鼠按鍵遭點擊
+                    # 遭點擊後反應
+                    if open_button.collidepoint(event.pos):  # event.pos 為收到點擊後
+                        menu_running = False
+                        self.running = True # 進入遊戲
+                        # 資料初始化
+                        game.run_game()
+                    elif close_button.collidepoint(event.pos):  
+                        menu_running = False
+                        pygame.quit() # 如按下退出鍵結束視窗s
+                        return init
+
+        
+
+
 
 player_coler = (random.randint(0, 255), random.randint(0, 255), random.randint(0, 255)) # 隨機角色顏色
-
+init = True
 if __name__ == '__main__':
-    game = pyg() # 連接class
-    while True:        
-        game.run_game()
+    game = pyg() # 連接class   
+    while True:
+        game.show_menu()
